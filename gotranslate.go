@@ -11,15 +11,19 @@ type Translate struct {
 	wd *webdriver.WebDriver
 }
 
-func NewTranslate() *Translate {
+func NewTranslate() (*Translate, error) {
 	wd := webdriver.NewWebDriver()
 	// wd.SetDebug(true)
-	wd.StartSession()
+	err := wd.StartSession()
+	if err != nil {
+		return nil, err
+	}
+
 	url := fmt.Sprintf("https://cn.bing.com/translator?ref=TThis")
 	wd.SetUrl(url)
 	return &Translate{
 		wd: wd,
-	}
+	}, nil
 }
 func jsonEncode(v interface{}) string {
 	ret, _ := json.Marshal(v)
@@ -54,11 +58,17 @@ func (t *Translate) Translate(text string, from string, to string) (string, erro
 				continue;
 			}
 			if (value&&value.length>0) {
-				return value;
+				return {
+					data:value,
+					error:""
+				};
 			}
 			await sleep(1000);
 		} 
-		return value;
+		return {
+			data:value,
+			error:"翻译失败"
+		};
 	`, jsonEncode(from), jsonEncode(to), jsonEncode(text))
 
 	// log.Println("jsSrc:", jsSrc)
@@ -66,7 +76,10 @@ func (t *Translate) Translate(text string, from string, to string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	return value.String(), nil
+	if value.Get("error").String() != "" {
+		return "", fmt.Errorf(value.Get("error").String())
+	}
+	return value.Get("data").String(), nil
 }
 
 func (t *Translate) Close() {

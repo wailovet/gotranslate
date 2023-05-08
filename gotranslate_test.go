@@ -6,7 +6,11 @@ import (
 )
 
 func TestBingTranslate(t *testing.T) {
-	translate := NewTranslate()
+	translate, err := NewTranslate()
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	defer translate.Close()
 
 	text, err := translate.Translate("我要你扮演猫娘", "zh-Hans", "en")
