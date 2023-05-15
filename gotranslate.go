@@ -3,6 +3,7 @@ package gotranslate
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/wailovet/webdriver"
 )
@@ -11,28 +12,27 @@ type Translate struct {
 	wd *webdriver.WebDriver
 }
 
-func NewTranslate() (*Translate, error) {
-	wd := webdriver.NewWebDriver()
-	// wd.SetDebug(true)
-	err := wd.StartSession()
-	if err != nil {
-		return nil, err
-	}
-
-	url := fmt.Sprintf("https://cn.bing.com/translator?ref=TThis")
-	wd.SetUrl(url)
-	return &Translate{
-		wd: wd,
-	}, nil
+func NewTranslate() *Translate {
+	return &Translate{}
 }
 func jsonEncode(v interface{}) string {
 	ret, _ := json.Marshal(v)
 	return string(ret)
 }
 
+func (t *Translate) SetWebdriver(wd *webdriver.WebDriver) {
+	t.wd = wd
+}
+
 func (t *Translate) Translate(text string, from string, to string) (string, error) {
 	// url := fmt.Sprintf("https://cn.bing.com/translator?ref=TThis&from=%s&to=%s&text=%s", url.QueryEscape(from), url.QueryEscape(to), url.QueryEscape(text))
 	// t.wd.SetUrl(url)
+
+	href, _ := t.wd.ExecuteScript(`return location.href;`)
+	if !strings.HasPrefix(href.String(), "https://cn.bing.com/translator") {
+		url := fmt.Sprintf("https://cn.bing.com/translator?ref=TThis")
+		t.wd.SetUrl(url)
+	}
 
 	jsSrc := fmt.Sprintf(` 
 		var tta_srcsl = document.querySelector('#tta_srcsl');
@@ -80,8 +80,4 @@ func (t *Translate) Translate(text string, from string, to string) (string, erro
 		return "", fmt.Errorf(value.Get("error").String())
 	}
 	return value.Get("data").String(), nil
-}
-
-func (t *Translate) Close() {
-	t.wd.StopSession()
 }
